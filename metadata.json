@@ -1,0 +1,8 @@
+{
+  "name": "Connectifyr",
+  "description": "A professional messaging platform using email for identification, featuring robust chat, voice, and video calling powered by Gemini.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
