@@ -3,12 +3,13 @@ import React, { useState } from 'react';
 import { ConnectifyrIcon } from './Icon';
 
 interface LoginProps {
-  onLogin: (email: string, name: string) => void;
+  onLogin: (email: string, name: string, remember: boolean) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const validateEmail = (email: string) => {
@@ -30,12 +31,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return;
     }
 
-    onLogin(email, name);
+    onLogin(email, name, rememberMe);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FFDEE9] bg-gradient-to-tr from-[#FF9A9E] to-[#FAD0C4] p-6">
-      <div className={`w-full max-w-md bg-white border-8 border-black rounded-[40px] shadow-[20px_20px_0px_#000] p-10 space-y-10 relative overflow-hidden transition-transform ${error ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
+      <div className={`w-full max-w-md bg-white border-8 border-black rounded-[40px] shadow-[20px_20px_0px_#000] p-10 space-y-8 relative overflow-hidden transition-transform ${error ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
         {/* Anime sparkles/decorations */}
         <div className="absolute top-4 left-4 text-yellow-400 text-3xl opacity-50 rotate-12"><i className="fas fa-star"></i></div>
         <div className="absolute bottom-10 right-4 text-pink-400 text-5xl opacity-30 -rotate-12"><i className="fas fa-heart"></i></div>
@@ -50,7 +51,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+        <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
           <div>
             <label className="block text-xs font-black text-black mb-2 uppercase tracking-widest">Character Name</label>
             <input
@@ -78,13 +79,29 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               className={`w-full px-5 py-4 bg-gray-50 border-4 border-black rounded-2xl focus:bg-white focus:outline-none transition-all font-bold placeholder:text-gray-300 shadow-[4px_4px_0px_#000] ${error && error.includes('BAKA') ? 'border-red-500 bg-red-50' : ''}`}
               placeholder="hokage@leaf.village"
             />
-            {error && (
-              <div className="mt-4 bg-red-500 text-white border-2 border-black p-2 rounded-lg font-black text-[10px] uppercase tracking-wider animate-bounce flex items-center gap-2">
-                <i className="fas fa-exclamation-triangle"></i>
-                {error}
-              </div>
-            )}
           </div>
+
+          <div className="flex items-center gap-3 no-select">
+            <label className="relative flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={rememberMe}
+                onChange={() => setRememberMe(!rememberMe)}
+              />
+              <div className="w-8 h-8 bg-white border-4 border-black rounded-lg shadow-[3px_3px_0px_#000] peer-checked:bg-pink-500 transition-colors flex items-center justify-center">
+                {rememberMe && <i className="fas fa-check text-white text-sm"></i>}
+              </div>
+              <span className="ml-3 text-xs font-black text-black uppercase tracking-widest italic">Remember my Legend!</span>
+            </label>
+          </div>
+
+          {error && (
+            <div className="bg-red-500 text-white border-4 border-black p-3 rounded-xl font-black text-[10px] uppercase tracking-wider animate-bounce flex items-center gap-2">
+              <i className="fas fa-exclamation-triangle"></i>
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"

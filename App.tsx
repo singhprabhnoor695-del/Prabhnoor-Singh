@@ -18,11 +18,11 @@ const AI_CONTACT: Contact = {
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('connectifyr_auth') === 'true';
+    return localStorage.getItem('connectifyr_auth') === 'true' || sessionStorage.getItem('connectifyr_auth') === 'true';
   });
   
   const [currentUser, setCurrentUser] = useState<{ email: string; name: string, avatar?: string } | null>(() => {
-    const saved = localStorage.getItem('connectifyr_user');
+    const saved = localStorage.getItem('connectifyr_user') || sessionStorage.getItem('connectifyr_user');
     return saved ? JSON.parse(saved) : null;
   });
   
@@ -58,19 +58,28 @@ const App: React.FC = () => {
     localStorage.setItem('connectifyr_chats', JSON.stringify(chatHistories));
   }, [chatHistories]);
 
-  const handleLogin = (email: string, name: string) => {
+  const handleLogin = (email: string, name: string, remember: boolean) => {
     const defaultAvatar = `https://api.dicebear.com/7.x/adventurer/svg?seed=${name}&backgroundColor=ffd5dc`;
     const user = { email, name, avatar: defaultAvatar };
     setCurrentUser(user);
     setIsAuthenticated(true);
-    localStorage.setItem('connectifyr_auth', 'true');
-    localStorage.setItem('connectifyr_user', JSON.stringify(user));
+    
+    if (remember) {
+      localStorage.setItem('connectifyr_auth', 'true');
+      localStorage.setItem('connectifyr_user', JSON.stringify(user));
+    } else {
+      sessionStorage.setItem('connectifyr_auth', 'true');
+      sessionStorage.setItem('connectifyr_user', JSON.stringify(user));
+    }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
-    localStorage.clear();
+    localStorage.removeItem('connectifyr_auth');
+    localStorage.removeItem('connectifyr_user');
+    sessionStorage.removeItem('connectifyr_auth');
+    sessionStorage.removeItem('connectifyr_user');
     setContacts([AI_CONTACT]);
     setChatHistories({});
     setActiveContactId(null);
@@ -102,7 +111,12 @@ const App: React.FC = () => {
     if (currentUser) {
       const updatedUser = { ...currentUser, avatar: url };
       setCurrentUser(updatedUser);
-      localStorage.setItem('connectifyr_user', JSON.stringify(updatedUser));
+      // Update either local or session storage
+      if (localStorage.getItem('connectifyr_user')) {
+        localStorage.setItem('connectifyr_user', JSON.stringify(updatedUser));
+      } else {
+        sessionStorage.setItem('connectifyr_user', JSON.stringify(updatedUser));
+      }
     }
   };
 
