@@ -37,7 +37,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FFDEE9] bg-gradient-to-tr from-[#FF9A9E] to-[#FAD0C4] p-6">
       <div className={`w-full max-w-md bg-white border-8 border-black rounded-[40px] shadow-[20px_20px_0px_#000] p-10 space-y-8 relative overflow-hidden transition-transform ${error ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
-        {/* Anime sparkles/decorations */}
         <div className="absolute top-4 left-4 text-yellow-400 text-3xl opacity-50 rotate-12"><i className="fas fa-star"></i></div>
         <div className="absolute bottom-10 right-4 text-pink-400 text-5xl opacity-30 -rotate-12"><i className="fas fa-heart"></i></div>
         

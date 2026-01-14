@@ -6,7 +6,7 @@ interface ChatWindowProps {
   contact: Contact | null;
   messages: Message[];
   isTyping?: boolean;
-  onSendMessage: (text: string, media?: { url: string, type: 'image' | 'video' | 'file', name?: string }) => void;
+  onSendMessage: (text: string, media?: { url: string, type: 'image' | 'video' | 'file' | 'voice', name?: string }) => void;
   onVoiceCall: () => void;
   onVideoCall: () => void;
   onBack?: () => void;
@@ -20,6 +20,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
   const [inputValue, setInputValue] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Voice Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<number | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +56,62 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
     onSendMessage(inputValue);
     setInputValue('');
     setShowEmojiPicker(false);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Audio = reader.result as string;
+          onSendMessage('', { url: base64Audio, type: 'voice', name: 'Voice Message' });
+        };
+        reader.readAsDataURL(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      timerRef.current = window.setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Microphone access denied", err);
+      alert("Please allow microphone access to record voice messages!");
+    }
+  };
+
+  const stopRecording = (shouldSend: boolean) => {
+    if (mediaRecorderRef.current && isRecording) {
+      if (shouldSend) {
+        mediaRecorderRef.current.stop();
+      } else {
+        // Cancel logic: just stop and discard
+        mediaRecorderRef.current.onstop = () => {
+            mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+        };
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+  };
+
+  const formatDuration = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,6 +205,30 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
                 <div className="mb-2 rounded-xl overflow-hidden border-2 border-black/10">
                   {msg.mediaType === 'image' && <img src={msg.mediaUrl} alt="Shared" className="w-full max-h-64 object-cover" />}
                   {msg.mediaType === 'video' && <video src={msg.mediaUrl} controls className="w-full max-h-64" />}
+                  {msg.mediaType === 'voice' && (
+                    <div className="flex items-center gap-3 p-3 bg-black/10 rounded-xl min-w-[200px]">
+                      <button className="w-10 h-10 bg-white border-2 border-black rounded-full flex items-center justify-center text-black active:scale-95 transition-transform" onClick={(e) => {
+                        const audio = (e.currentTarget.nextElementSibling as HTMLAudioElement);
+                        if (audio.paused) audio.play(); else audio.pause();
+                      }}>
+                        <i className="fas fa-play ml-1"></i>
+                      </button>
+                      <audio src={msg.mediaUrl} className="hidden" onPlay={(e) => {
+                        const icon = (e.currentTarget.previousElementSibling as HTMLElement).querySelector('i');
+                        if (icon) icon.className = 'fas fa-pause';
+                      }} onPause={(e) => {
+                        const icon = (e.currentTarget.previousElementSibling as HTMLElement).querySelector('i');
+                        if (icon) icon.className = 'fas fa-play ml-1';
+                      }} onEnded={(e) => {
+                        const icon = (e.currentTarget.previousElementSibling as HTMLElement).querySelector('i');
+                        if (icon) icon.className = 'fas fa-play ml-1';
+                      }} />
+                      <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden relative">
+                         <div className="absolute inset-0 bg-white/40 animate-pulse"></div>
+                      </div>
+                      <span className="text-[10px] font-black uppercase">VOICE</span>
+                    </div>
+                  )}
                   {msg.mediaType === 'file' && (
                     <div className="flex items-center gap-3 p-2 bg-black/5">
                       <i className="fas fa-file-alt text-xl"></i>
@@ -205,42 +293,74 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 md:gap-2 pb-1">
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white border-2 md:border-4 border-black rounded-xl hover:bg-blue-100 transition-all shadow-[2px_2px_0px_#000] md:shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:shadow-none"
-            >
-              <i className="fas fa-paperclip text-sm md:text-xl"></i>
-            </button>
-            <button 
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white border-2 md:border-4 border-black rounded-xl hover:bg-pink-100 transition-all shadow-[2px_2px_0px_#000] md:shadow-[3px_3px_0px_#000]"
-            >
-              <i className="far fa-smile text-sm md:text-xl"></i>
-            </button>
-          </div>
+          {!isRecording ? (
+            <div className="flex items-center gap-1.5 md:gap-2 pb-1">
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white border-2 md:border-4 border-black rounded-xl hover:bg-blue-100 transition-all shadow-[2px_2px_0px_#000] md:shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:shadow-none"
+              >
+                <i className="fas fa-paperclip text-sm md:text-xl"></i>
+              </button>
+              <button 
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white border-2 md:border-4 border-black rounded-xl hover:bg-pink-100 transition-all shadow-[2px_2px_0px_#000] md:shadow-[3px_3px_0px_#000]"
+              >
+                <i className="far fa-smile text-sm md:text-xl"></i>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 pb-1 bg-red-100 border-2 border-black px-3 py-2 rounded-2xl flex-1 animate-pulse">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+                <span className="font-black text-red-600 uppercase text-[10px] md:text-xs">Recording {formatDuration(recordingDuration)}</span>
+                <div className="flex-1 flex gap-1 items-center justify-center">
+                   <div className="w-1 h-3 bg-red-400 rounded-full animate-[bounce_0.5s_infinite_0s]"></div>
+                   <div className="w-1 h-5 bg-red-400 rounded-full animate-[bounce_0.5s_infinite_0.1s]"></div>
+                   <div className="w-1 h-2 bg-red-400 rounded-full animate-[bounce_0.5s_infinite_0.2s]"></div>
+                </div>
+            </div>
+          )}
           
-          <div className="flex-1 relative">
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Message..."
-              className="w-full bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm font-bold focus:outline-none resize-none max-h-24 md:max-h-32 min-h-[40px] md:min-h-[48px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.05)]"
-              rows={1}
-            />
-          </div>
+          {!isRecording && (
+            <div className="flex-1 relative">
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Message..."
+                className="w-full bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm font-bold focus:outline-none resize-none max-h-24 md:max-h-32 min-h-[40px] md:min-h-[48px] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.05)]"
+                rows={1}
+              />
+            </div>
+          )}
 
-          <div className="flex items-center pb-1">
-            <button 
-              onClick={handleSend}
-              disabled={!inputValue.trim() && !isUploading}
-              className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center transition-all border-2 md:border-4 border-black shadow-[2px_2px_0px_#000] md:shadow-[4px_4px_0px_#000] active:translate-y-1 active:shadow-none ${
-                inputValue.trim() || isUploading ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-400 opacity-50'
-              }`}
-            >
-              {isUploading ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-paper-plane text-sm md:text-xl"></i>}
-            </button>
+          <div className="flex items-center pb-1 gap-2">
+            {isRecording && (
+               <button 
+                 onClick={() => stopRecording(false)}
+                 className="w-10 h-10 md:w-14 md:h-14 bg-white border-2 md:border-4 border-black rounded-xl flex items-center justify-center text-red-500 hover:bg-red-50 transition-all shadow-[2px_2px_0px_#000]"
+               >
+                 <i className="fas fa-trash"></i>
+               </button>
+            )}
+
+            {!inputValue.trim() && !isRecording && !isUploading ? (
+              <button 
+                onClick={startRecording}
+                className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center transition-all border-2 md:border-4 border-black shadow-[2px_2px_0px_#000] md:shadow-[4px_4px_0px_#000] bg-indigo-500 text-white active:translate-y-1 active:shadow-none"
+              >
+                <i className="fas fa-microphone text-sm md:text-xl"></i>
+              </button>
+            ) : (
+              <button 
+                onClick={() => isRecording ? stopRecording(true) : handleSend()}
+                disabled={!inputValue.trim() && !isRecording && !isUploading}
+                className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center transition-all border-2 md:border-4 border-black shadow-[2px_2px_0px_#000] md:shadow-[4px_4px_0px_#000] active:translate-y-1 active:shadow-none ${
+                  inputValue.trim() || isUploading || isRecording ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-400 opacity-50'
+                }`}
+              >
+                {isUploading ? <i className="fas fa-spinner animate-spin"></i> : (isRecording ? <i className="fas fa-check text-sm md:text-xl"></i> : <i className="fas fa-paper-plane text-sm md:text-xl"></i>)}
+              </button>
+            )}
           </div>
         </div>
       </div>

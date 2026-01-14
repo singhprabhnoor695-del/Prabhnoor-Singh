@@ -1,44 +1,61 @@
 
 import React from 'react';
 
-export const ConnectifyrIcon: React.FC<{ className?: string }> = ({ className = "w-16 h-16" }) => {
+/**
+ * Connectifyr Icon Component
+ * A high-contrast, anime-inspired logo representing speed and connection.
+ * Features a stylized paper plane merging into a 'C' shape.
+ */
+export const ConnectifyrIcon: React.FC<{ className?: string, hideShadow?: boolean }> = ({ 
+  className = "w-16 h-16", 
+  hideShadow = false 
+}) => {
   return (
-    <div className={`relative ${className}`}>
-      {/* Outer Glow/Border for Anime Look */}
-      <div className="absolute inset-0 bg-black rounded-3xl translate-x-1 translate-y-1"></div>
+    <div className={`relative inline-block ${className} no-select group`}>
+      {/* Neo-Brutalism Offset Shadow (The black block behind) */}
+      {!hideShadow && (
+        <div className="absolute inset-0 bg-black rounded-[22%] translate-x-1.5 translate-y-1.5 transition-transform group-hover:translate-x-2 group-hover:translate-y-2"></div>
+      )}
       
-      {/* Main Square Container */}
-      <div className="relative w-full h-full bg-pink-500 border-[3px] border-black rounded-3xl flex items-center justify-center overflow-hidden">
-        {/* Decorative Inner Circle */}
-        <div className="absolute -top-4 -right-4 w-12 h-12 bg-white/20 rounded-full"></div>
-        <div className="absolute -bottom-2 -left-2 w-8 h-8 bg-yellow-300/40 rounded-full"></div>
+      {/* Main Logo Container */}
+      <div className="relative w-full h-full bg-pink-500 border-[3.5px] border-black rounded-[22%] flex items-center justify-center overflow-hidden transition-transform group-active:translate-x-1 group-active:translate-y-1">
         
-        {/* The Paper Plane "C" Hybrid */}
+        {/* Dynamic Background Elements (Anime Sparkles/Glow) */}
+        <div className="absolute -top-1/4 -right-1/4 w-full h-full bg-white/15 rounded-full blur-xl"></div>
+        <div className="absolute -bottom-4 -left-4 w-3/4 h-3/4 bg-yellow-300/20 rounded-full blur-xl"></div>
+        
+        {/* The Core Icon (Stylized Paper Plane Hybrid) */}
         <svg 
           viewBox="0 0 24 24" 
           fill="none" 
-          className="w-2/3 h-2/3 text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,0.5)]"
+          className="w-[65%] h-[65%] text-white drop-shadow-[2.5px_2.5px_0px_rgba(0,0,0,1)]"
           xmlns="http://www.w3.org/2000/svg"
         >
+          {/* Main Plane Body */}
           <path 
-            d="M21.5 3L2.5 10.5L10 14L13.5 21.5L21.5 3Z" 
-            stroke="currentColor" 
-            strokeWidth="2.5" 
+            d="M22 2L2 10L10 14L14 22L22 2Z" 
+            fill="white"
+            stroke="white" 
+            strokeWidth="1" 
             strokeLinecap="round" 
             strokeLinejoin="round" 
           />
+          {/* Internal Detail Line */}
           <path 
-            d="M10 14L21.5 3" 
-            stroke="currentColor" 
-            strokeWidth="2" 
+            d="M10 14L22 2" 
+            stroke="black" 
+            strokeWidth="1.5" 
             strokeLinecap="round" 
             strokeLinejoin="round" 
           />
         </svg>
         
-        {/* Speed Lines for Anime Effect */}
-        <div className="absolute left-1 top-2 w-4 h-0.5 bg-white/40 rounded-full"></div>
-        <div className="absolute left-2 top-4 w-6 h-0.5 bg-white/40 rounded-full"></div>
+        {/* Anime Speed Lines (White highlights for motion effect) */}
+        <div className="absolute top-[20%] left-[10%] w-[35%] h-[4%] bg-white/60 rounded-full rotate-[-5deg]"></div>
+        <div className="absolute top-[35%] left-[8%] w-[20%] h-[4%] bg-white/40 rounded-full rotate-[-5deg]"></div>
+        
+        {/* Bottom Right Decorative Signature Dot */}
+        <div className="absolute bottom-2 right-2 w-2 h-2 bg-yellow-300 border-[1.5px] border-black rounded-full shadow-[1px_1px_0px_#000]"></div>
       </div>
     </div>
   );

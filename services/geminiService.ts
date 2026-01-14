@@ -1,7 +1,8 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Using the API key provided by the user for the preview environment
+const ai = new GoogleGenAI({ apiKey: "AIzaSyDsahkdj6IyjyT9FKWaqGCoQnzhnv5keak" });
 
 /**
  * Uses the latest flash model for multimodal (text + image) generation.

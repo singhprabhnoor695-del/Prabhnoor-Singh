@@ -111,7 +111,6 @@ const App: React.FC = () => {
     if (currentUser) {
       const updatedUser = { ...currentUser, avatar: url };
       setCurrentUser(updatedUser);
-      // Update either local or session storage
       if (localStorage.getItem('connectifyr_user')) {
         localStorage.setItem('connectifyr_user', JSON.stringify(updatedUser));
       } else {
@@ -123,7 +122,7 @@ const App: React.FC = () => {
   const activeContact = contacts.find(c => c.id === activeContactId) || null;
   const activeMessages = activeContactId ? (chatHistories[activeContactId] || []) : [];
 
-  const handleSendMessage = useCallback(async (text: string, media?: { url: string, type: 'image' | 'video' | 'file', name?: string }) => {
+  const handleSendMessage = useCallback(async (text: string, media?: { url: string, type: 'image' | 'video' | 'file' | 'voice', name?: string }) => {
     if (!activeContactId) return;
 
     const messageId = Date.now().toString();
@@ -132,7 +131,7 @@ const App: React.FC = () => {
       senderId: 'me',
       text,
       mediaUrl: media?.url,
-      mediaType: media?.type,
+      mediaType: media?.type as any,
       fileName: media?.name,
       timestamp: Date.now(),
       type: media ? 'media' : 'text',
@@ -211,8 +210,6 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen w-screen overflow-hidden antialiased md:p-6 lg:p-10 justify-center items-center">
       <div className="flex w-full h-full max-w-[1600px] bg-white md:bg-white/95 md:backdrop-blur-md md:shadow-[20px_20px_0px_#000] md:rounded-[2.5rem] md:border-[6px] border-black transition-all app-container overflow-hidden">
-        
-        {/* Responsive Layout Handling */}
         <div className={`h-full border-r-4 border-black transition-all duration-300 ${isMobileView ? (showChatOnMobile ? 'hidden' : 'w-full') : 'w-80 lg:w-96'}`}>
           <Sidebar 
             contacts={contacts.map(c => ({
@@ -224,6 +221,7 @@ const App: React.FC = () => {
             activeContactId={activeContactId} 
             onSelectContact={handleSelectContact}
             currentUserEmail={currentUser.email}
+            currentUserName={currentUser.name} // Added currentUserName
             currentUserAvatar={currentUser.avatar}
             onLogout={handleLogout}
             onAddContact={handleAddContact}

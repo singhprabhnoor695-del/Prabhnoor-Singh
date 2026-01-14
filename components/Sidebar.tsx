@@ -8,6 +8,7 @@ interface SidebarProps {
   activeContactId: string | null;
   onSelectContact: (id: string) => void;
   currentUserEmail: string;
+  currentUserName: string; // Added currentUserName
   currentUserAvatar?: string;
   onLogout: () => void;
   onAddContact: (name: string, email: string) => void;
@@ -16,33 +17,28 @@ interface SidebarProps {
 
 /**
  * GENERATING 110+ THEMED ANIME & CHARACTER DPS
- * Includes specific seeds inspired by Doraemon, Shin-chan, and other classic anime styles.
  */
 const generateVarietyDps = () => {
   const dps: string[] = [];
   
-  // 30 "Doraemon-esque" seeds (Adventurer engine with specific colors)
   const blueSeeds = ['Dora', 'Nobita', 'Shizuka', 'Suneo', 'Gian', 'Dorami', 'Robot', 'Gadget', 'Bell', 'Future'];
   for (let i = 0; i < 30; i++) {
     const seed = blueSeeds[i % blueSeeds.length] + i;
     dps.push(`https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=b6e3f4,00a0e9`);
   }
   
-  // 30 "Shin-chan" style (Big Ears engine for that rounder cheek look)
   const kidsSeeds = ['Shin', 'Himawari', 'Kazama', 'Masao', 'Nene', 'Bo-chan', 'ActionMask', 'Buriburi', 'Chocobi', 'Misae'];
   for (let i = 0; i < 30; i++) {
     const seed = kidsSeeds[i % kidsSeeds.length] + i;
     dps.push(`https://api.dicebear.com/7.x/big-ears/svg?seed=${seed}&backgroundColor=ffd5dc,ffdfbf`);
   }
 
-  // 30 "Action Anime" (Adventurer engine with high contrast)
   const actionSeeds = ['Goku', 'Naruto', 'Luffy', 'Ichigo', 'Zoro', 'Saitama', 'Deku', 'Tanjiro', 'Asta', 'Eren'];
   for (let i = 0; i < 30; i++) {
     const seed = actionSeeds[i % actionSeeds.length] + i;
     dps.push(`https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=ffdfbf,c0aede`);
   }
 
-  // 25 "Artistic/Modern Anime" (Notionists style)
   for (let i = 0; i < 25; i++) {
     dps.push(`https://api.dicebear.com/7.x/notionists/svg?seed=AnimeArt${i}&backgroundColor=f1f1f1,d1d4f9`);
   }
@@ -57,6 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   activeContactId, 
   onSelectContact, 
   currentUserEmail, 
+  currentUserName, // Consuming the name
   currentUserAvatar,
   onLogout, 
   onAddContact,
@@ -119,7 +116,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </button>
           <div className="min-w-0 overflow-hidden">
-            <p className="text-[10px] font-black uppercase text-black truncate">{currentUserEmail}</p>
+            {/* Displaying Name instead of Email */}
+            <p className="text-[12px] font-black uppercase text-black truncate leading-none mb-1 italic">{currentUserName}</p>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-green-500 rounded-full border border-black animate-pulse"></div>
               <span className="text-[8px] font-bold uppercase text-black/60 tracking-widest">Nakama Member</span>
