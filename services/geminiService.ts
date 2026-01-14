@@ -1,8 +1,14 @@
-
 import { GoogleGenAI, Modality } from "@google/genai";
 
-// Using the API key provided by the user for the preview environment
-const ai = new GoogleGenAI({ apiKey: "AIzaSyDsahkdj6IyjyT9FKWaqGCoQnzhnv5keak" });
+/**
+ * In Vite-based projects (like this one), environment variables are accessed 
+ * via import.meta.env. We also provide a fallback to process.env for 
+ * environments that inject it directly.
+ */
+const getApiKey = () => {
+  // @ts-ignore - Vite specific env
+  return import.meta.env?.VITE_API_KEY || process.env.API_KEY || "AIzaSyDsahkdj6IyjyT9FKWaqGCoQnzhnv5keak";
+};
 
 /**
  * Uses the latest flash model for multimodal (text + image) generation.
@@ -12,6 +18,7 @@ export async function getGeminiResponse(
   history: { role: 'user' | 'model', parts: { text?: string, inlineData?: { mimeType: string, data: string } }[] }[]
 ) {
   try {
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [
@@ -26,7 +33,7 @@ export async function getGeminiResponse(
     return response.text;
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Gomen! Connection error. Please try again.";
+    return "Gomen! Connection error. Please check your API Key in Netlify settings.";
   }
 }
 
@@ -35,6 +42,7 @@ export async function getGeminiResponse(
  */
 export async function generateSpeech(text: string): Promise<string | undefined> {
   try {
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text }] }],
