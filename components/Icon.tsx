@@ -12,51 +12,66 @@ export const ConnectifyrIcon: React.FC<{ className?: string, hideShadow?: boolea
 }) => {
   return (
     <div className={`relative inline-block ${className} no-select group`}>
-      {/* Neo-Brutalism Offset Shadow (The black block behind) */}
+      {/* Neo-Brutalism Offset Shadow */}
       {!hideShadow && (
-        <div className="absolute inset-0 bg-black rounded-[22%] translate-x-1.5 translate-y-1.5 transition-transform group-hover:translate-x-2 group-hover:translate-y-2"></div>
+        <div className="absolute inset-0 bg-black rounded-[24%] translate-x-2 translate-y-2 transition-all group-hover:translate-x-3 group-hover:translate-y-3"></div>
       )}
       
       {/* Main Logo Container */}
-      <div className="relative w-full h-full bg-pink-500 border-[3.5px] border-black rounded-[22%] flex items-center justify-center overflow-hidden transition-transform group-active:translate-x-1 group-active:translate-y-1">
+      <div className="relative w-full h-full bg-[#6366f1] border-[4px] border-black rounded-[24%] flex items-center justify-center overflow-hidden transition-all group-active:translate-x-1 group-active:translate-y-1">
         
-        {/* Dynamic Background Elements (Anime Sparkles/Glow) */}
-        <div className="absolute -top-1/4 -right-1/4 w-full h-full bg-white/15 rounded-full blur-xl"></div>
-        <div className="absolute -bottom-4 -left-4 w-3/4 h-3/4 bg-yellow-300/20 rounded-full blur-xl"></div>
+        {/* Dynamic Background Gradients */}
+        <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+        <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-pink-400/30 rounded-full blur-2xl"></div>
         
-        {/* The Core Icon (Stylized Paper Plane Hybrid) */}
+        {/* The Core Icon (Stylized C-Plane Hybrid) */}
         <svg 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          className="w-[65%] h-[65%] text-white drop-shadow-[2.5px_2.5px_0px_rgba(0,0,0,1)]"
+          viewBox="0 0 100 100" 
+          className="w-[70%] h-[70%] drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Main Plane Body */}
+          {/* Stylized 'C' and Plane Body */}
           <path 
-            d="M22 2L2 10L10 14L14 22L22 2Z" 
+            d="M85 20 L20 45 L50 55 L55 85 L85 20" 
             fill="white"
-            stroke="white" 
-            strokeWidth="1" 
-            strokeLinecap="round" 
+            stroke="black" 
+            strokeWidth="4" 
             strokeLinejoin="round" 
           />
-          {/* Internal Detail Line */}
+          {/* Internal Movement Line */}
           <path 
-            d="M10 14L22 2" 
+            d="M50 55 L85 20" 
             stroke="black" 
-            strokeWidth="1.5" 
+            strokeWidth="5" 
             strokeLinecap="round" 
-            strokeLinejoin="round" 
+          />
+          {/* Secondary Plane Wing (Fold) */}
+          <path 
+            d="M50 55 L55 85 L65 60 Z" 
+            fill="#fbbf24"
+            stroke="black"
+            strokeWidth="2"
           />
         </svg>
         
-        {/* Anime Speed Lines (White highlights for motion effect) */}
-        <div className="absolute top-[20%] left-[10%] w-[35%] h-[4%] bg-white/60 rounded-full rotate-[-5deg]"></div>
-        <div className="absolute top-[35%] left-[8%] w-[20%] h-[4%] bg-white/40 rounded-full rotate-[-5deg]"></div>
+        {/* Speed Lines */}
+        <div className="absolute top-[15%] left-0 w-full h-full pointer-events-none overflow-hidden opacity-40">
+           <div className="absolute top-0 left-0 w-8 h-[2px] bg-white rounded-full animate-[speed-line_1s_infinite_linear]"></div>
+           <div className="absolute top-4 left-2 w-12 h-[2px] bg-white rounded-full animate-[speed-line_1.2s_infinite_linear_0.2s]"></div>
+           <div className="absolute top-8 left-1 w-6 h-[2px] bg-white rounded-full animate-[speed-line_0.8s_infinite_linear_0.4s]"></div>
+        </div>
         
-        {/* Bottom Right Decorative Signature Dot */}
-        <div className="absolute bottom-2 right-2 w-2 h-2 bg-yellow-300 border-[1.5px] border-black rounded-full shadow-[1px_1px_0px_#000]"></div>
+        {/* Gloss Highlight */}
+        <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
       </div>
+
+      <style>{`
+        @keyframes speed-line {
+          0% { transform: translateX(-100%); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateX(300%); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 };

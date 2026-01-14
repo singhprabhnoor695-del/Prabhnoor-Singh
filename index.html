@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Connectifyr | Anime Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,15 +13,21 @@
     :root {
       --neobrutalism-shadow: 8px 8px 0px #000;
       --neobrutalism-shadow-hover: 12px 12px 0px #000;
+      --anime-pink: #FF9A9E;
+      --anime-blue: #B5FFFC;
     }
 
     body {
       font-family: 'Lexend', sans-serif;
       overflow: hidden;
-      background-color: #f0f2f5;
+      background: linear-gradient(135deg, #FFDEE9 0%, #B5FFFC 100%);
+      /* Support for modern viewport heights to prevent mobile browser UI overlap */
       height: 100vh;
+      height: 100svh;
       width: 100vw;
       position: fixed;
+      margin: 0;
+      padding: 0;
     }
 
     ::-webkit-scrollbar {
@@ -31,9 +38,8 @@
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #818cf8;
-      border: 2px solid #000;
-      border-radius: 10px;
+      background: #000;
+      border: 2px solid #fff;
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #6366f1;
@@ -58,12 +64,21 @@
       animation: icon-float 3s ease-in-out infinite;
     }
 
+    /* Device-specific responsiveness tweaks */
     @media (max-width: 768px) {
       .app-container {
-        height: calc(100vh - env(safe-area-inset-bottom));
+        height: 100svh !important;
+        max-height: 100svh !important;
         border-radius: 0 !important;
         border: none !important;
         box-shadow: none !important;
+      }
+    }
+
+    @media (min-width: 1600px) {
+      .app-container {
+        max-width: 1400px;
+        margin: auto;
       }
     }
   </style>
@@ -80,7 +95,7 @@
 }
 </script>
 </head>
-<body class="text-gray-900 bg-[#FFDEE9] bg-gradient-to-br from-[#FFDEE9] to-[#B5FFFC]">
+<body class="text-gray-900">
   <div id="root" class="h-full w-full flex items-center justify-center"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

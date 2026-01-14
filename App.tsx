@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import CallOverlay from './components/CallOverlay';
@@ -28,12 +28,19 @@ const App: React.FC = () => {
   
   const [contacts, setContacts] = useState<Contact[]>(() => {
     const saved = localStorage.getItem('connectifyr_contacts');
-    return saved ? JSON.parse(saved) : [AI_CONTACT];
+    const initial = saved ? JSON.parse(saved) : [AI_CONTACT];
+    if (!initial.find((c: Contact) => c.id === 'gemini-ai')) {
+      return [AI_CONTACT, ...initial];
+    }
+    return initial;
   });
   
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
+
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
 
   const [chatHistories, setChatHistories] = useState<Record<string, Message[]>>(() => {
     const saved = localStorage.getItem('connectifyr_chats');
@@ -45,7 +52,7 @@ const App: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobileView(window.innerWidth < 768);
+    const handleResize = () => setViewportWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -74,53 +81,56 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    localStorage.removeItem('connectifyr_auth');
-    localStorage.removeItem('connectifyr_user');
-    sessionStorage.removeItem('connectifyr_auth');
-    sessionStorage.removeItem('connectifyr_user');
-    setContacts([AI_CONTACT]);
-    setChatHistories({});
-    setActiveContactId(null);
-    setShowChatOnMobile(false);
+    if (window.confirm("Are you sure you want to logout?")) {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      localStorage.removeItem('connectifyr_auth');
+      localStorage.removeItem('connectifyr_user');
+      sessionStorage.removeItem('connectifyr_auth');
+      sessionStorage.removeItem('connectifyr_user');
+      setContacts([AI_CONTACT]);
+      setChatHistories({});
+      setActiveContactId(null);
+      setShowChatOnMobile(false);
+    }
   };
 
   const handleAddContact = (name: string, email: string) => {
+    if (email.toLowerCase() === currentUser?.email.toLowerCase()) {
+      alert("You cannot add yourself!");
+      return;
+    }
+    if (contacts.find(c => c.email.toLowerCase() === email.toLowerCase())) {
+      alert("Contact already exists!");
+      return;
+    }
     const newContact: Contact = {
-      id: Date.now().toString(),
+      id: btoa(email),
       name,
       email,
       avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=${name}&backgroundColor=ffd5dc`,
       status: 'offline',
-      lastMessage: 'Newly added nakama!'
+      lastMessage: 'Added to your circle!'
     };
     setContacts(prev => [...prev, newContact]);
   };
 
   const handleSelectContact = (id: string) => {
     setActiveContactId(id);
-    if (isMobileView) setShowChatOnMobile(true);
-  };
-
-  const handleBackToContacts = () => {
-    setShowChatOnMobile(false);
+    if (isMobile) setShowChatOnMobile(true);
   };
 
   const handleChangeAvatar = (url: string) => {
     if (currentUser) {
       const updatedUser = { ...currentUser, avatar: url };
       setCurrentUser(updatedUser);
-      if (localStorage.getItem('connectifyr_user')) {
-        localStorage.setItem('connectifyr_user', JSON.stringify(updatedUser));
-      } else {
-        sessionStorage.setItem('connectifyr_user', JSON.stringify(updatedUser));
-      }
+      const storage = localStorage.getItem('connectifyr_user') ? localStorage : sessionStorage;
+      storage.setItem('connectifyr_user', JSON.stringify(updatedUser));
     }
   };
 
-  const activeContact = contacts.find(c => c.id === activeContactId) || null;
-  const activeMessages = activeContactId ? (chatHistories[activeContactId] || []) : [];
+  const activeContact = useMemo(() => contacts.find(c => c.id === activeContactId) || null, [contacts, activeContactId]);
+  const activeMessages = useMemo(() => activeContactId ? (chatHistories[activeContactId] || []) : [], [chatHistories, activeContactId]);
 
   const handleSendMessage = useCallback(async (text: string, media?: { url: string, type: 'image' | 'video' | 'file' | 'voice', name?: string }) => {
     if (!activeContactId) return;
@@ -134,7 +144,7 @@ const App: React.FC = () => {
       mediaType: media?.type as any,
       fileName: media?.name,
       timestamp: Date.now(),
-      type: media ? 'media' : 'text',
+      type: media ? (media.type === 'voice' ? 'voice' : 'media') : 'text',
       status: 'sent'
     };
 
@@ -143,36 +153,16 @@ const App: React.FC = () => {
       [activeContactId]: [...(prev[activeContactId] || []), newMessage]
     }));
 
-    setTimeout(() => {
-      setChatHistories(prev => {
-        const history = prev[activeContactId] || [];
-        const updated = history.map(m => m.id === messageId ? { ...m, status: 'read' as const } : m);
-        return { ...prev, [activeContactId]: updated };
-      });
-    }, 2000);
-
     if (activeContactId === 'gemini-ai') {
       setIsTyping(true);
-      
-      const history = (chatHistories['gemini-ai'] || []).slice(-6).map(m => {
-        const parts: any[] = [];
-        if (m.text) parts.push({ text: m.text });
-        if (m.mediaUrl && m.mediaType === 'image') {
-          const base64Data = m.mediaUrl.split(',')[1];
-          parts.push({ inlineData: { mimeType: 'image/png', data: base64Data } });
-        }
-        return {
-          role: (m.senderId === 'me' ? 'user' : 'model') as 'user' | 'model',
-          parts
-        };
-      });
+      const history = (chatHistories['gemini-ai'] || []).slice(-10).map(m => ({
+        role: (m.senderId === 'me' ? 'user' : 'model') as 'user' | 'model',
+        parts: [{ text: m.text || '' }]
+      }));
 
-      const effectivePrompt = text || (media?.type === 'image' ? "What do you think of this image?" : "Check this out!");
-      
       try {
-        const responseText = await getGeminiResponse(effectivePrompt, history);
+        const responseText = await getGeminiResponse(text || "Help!", history);
         setIsTyping(false);
-
         if (responseText) {
           const aiMessage: Message = {
             id: (Date.now() + 1).toString(),
@@ -182,20 +172,14 @@ const App: React.FC = () => {
             type: 'text',
             status: 'read'
           };
-
           setChatHistories(prev => ({
             ...prev,
             ['gemini-ai']: [...(prev['gemini-ai'] || []), aiMessage]
           }));
-
           setIsSpeaking(true);
-          generateSpeech(responseText).then(audioBase64 => {
-            if (audioBase64) {
-              playPCM(audioBase64).finally(() => setIsSpeaking(false));
-            } else {
-              setIsSpeaking(false);
-            }
-          }).catch(() => setIsSpeaking(false));
+          const audio = await generateSpeech(responseText);
+          if (audio) await playPCM(audio);
+          setIsSpeaking(false);
         }
       } catch (err) {
         setIsTyping(false);
@@ -208,20 +192,21 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden antialiased md:p-6 lg:p-10 justify-center items-center">
-      <div className="flex w-full h-full max-w-[1600px] bg-white md:bg-white/95 md:backdrop-blur-md md:shadow-[20px_20px_0px_#000] md:rounded-[2.5rem] md:border-[6px] border-black transition-all app-container overflow-hidden">
-        <div className={`h-full border-r-4 border-black transition-all duration-300 ${isMobileView ? (showChatOnMobile ? 'hidden' : 'w-full') : 'w-80 lg:w-96'}`}>
+    <div className="flex h-screen w-screen overflow-hidden antialiased md:p-4 lg:p-8 xl:p-12 justify-center items-center bg-transparent">
+      <div className="flex w-full h-full md:max-h-[900px] xl:max-h-[1000px] bg-white md:shadow-[20px_20px_0px_#000] md:rounded-[2.5rem] md:border-[6px] border-black transition-all app-container overflow-hidden relative">
+        
+        {/* Sidebar: Adaptive width */}
+        <div className={`h-full border-black transition-all duration-300 ${
+          isMobile 
+            ? (showChatOnMobile ? 'hidden' : 'w-full') 
+            : 'w-72 md:w-80 lg:w-96 border-r-[6px] flex-shrink-0'
+        }`}>
           <Sidebar 
-            contacts={contacts.map(c => ({
-              ...c,
-              lastMessage: chatHistories[c.id]?.length 
-                ? (chatHistories[c.id][chatHistories[c.id].length - 1].mediaType ? `Shared ${chatHistories[c.id][chatHistories[c.id].length - 1].mediaType}` : chatHistories[c.id][chatHistories[c.id].length - 1].text)
-                : c.lastMessage
-            }))} 
+            contacts={contacts} 
             activeContactId={activeContactId} 
             onSelectContact={handleSelectContact}
             currentUserEmail={currentUser.email}
-            currentUserName={currentUser.name} // Added currentUserName
+            currentUserName={currentUser.name}
             currentUserAvatar={currentUser.avatar}
             onLogout={handleLogout}
             onAddContact={handleAddContact}
@@ -229,7 +214,10 @@ const App: React.FC = () => {
           />
         </div>
 
-        <div className={`flex-1 h-full transition-all duration-300 ${isMobileView && !showChatOnMobile ? 'hidden' : 'flex'}`}>
+        {/* Chat Window: Fluid width */}
+        <div className={`flex-1 h-full transition-all duration-300 ${
+          isMobile && !showChatOnMobile ? 'hidden' : 'flex'
+        }`}>
           <ChatWindow 
             contact={activeContact}
             messages={activeMessages}
@@ -237,7 +225,7 @@ const App: React.FC = () => {
             onSendMessage={handleSendMessage}
             onVoiceCall={() => setActiveCall({ type: 'voice', contactId: activeContactId! })}
             onVideoCall={() => setActiveCall({ type: 'video', contactId: activeContactId! })}
-            onBack={isMobileView ? handleBackToContacts : undefined}
+            onBack={isMobile ? () => setShowChatOnMobile(false) : undefined}
           />
         </div>
       </div>
@@ -251,13 +239,13 @@ const App: React.FC = () => {
       )}
       
       {isSpeaking && (
-        <div className="fixed bottom-24 md:bottom-12 right-6 md:right-12 bg-pink-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-3xl border-4 border-black shadow-[6px_6px_0px_#000] md:shadow-[10px_10px_0px_#000] flex items-center gap-3 md:gap-4 animate-bounce z-[100]">
+        <div className="fixed bottom-24 md:bottom-12 right-6 md:right-12 bg-pink-500 text-white px-6 py-3 rounded-2xl border-4 border-black shadow-[6px_6px_0px_#000] flex items-center gap-3 animate-bounce z-[100] cursor-pointer no-select">
           <div className="flex gap-1">
-            <div className="w-1 md:w-1.5 h-4 md:h-6 bg-white animate-pulse"></div>
-            <div className="w-1 md:w-1.5 h-4 md:h-6 bg-white animate-pulse [animation-delay:0.2s]"></div>
-            <div className="w-1 md:w-1.5 h-4 md:h-6 bg-white animate-pulse [animation-delay:0.4s]"></div>
+             <div className="w-1 h-4 bg-white rounded-full animate-pulse"></div>
+             <div className="w-1 h-4 bg-white rounded-full animate-pulse [animation-delay:0.2s]"></div>
+             <div className="w-1 h-4 bg-white rounded-full animate-pulse [animation-delay:0.4s]"></div>
           </div>
-          <span className="text-[10px] md:text-sm font-black uppercase tracking-widest">Speaking...</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Live Voice</span>
         </div>
       )}
     </div>
