@@ -17,6 +17,7 @@ const EMOJI_LIST = ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "�
 const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, onSendMessage, onVoiceCall, onVideoCall, onBack }) => {
   const [inputValue, setInputValue] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<{ url: string, type: 'image' | 'video' | 'file', name: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,10 +28,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
   }, [messages, isTyping]);
 
   const handleSend = () => {
-    if (!inputValue.trim()) return;
-    onSendMessage(inputValue);
+    if (!inputValue.trim() && !selectedMedia) return;
+    onSendMessage(inputValue, selectedMedia || undefined);
     setInputValue('');
+    setSelectedMedia(null);
     setShowEmojiPicker(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const url = event.target?.result as string;
+      let type: 'image' | 'video' | 'file' = 'file';
+      if (file.type.startsWith('image/')) type = 'image';
+      else if (file.type.startsWith('video/')) type = 'video';
+      
+      setSelectedMedia({ url, type, name: file.name });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -46,8 +64,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
         <div className="w-24 h-24 md:w-32 md:h-32 bg-pink-100 border-4 border-black rounded-full flex items-center justify-center mb-6 shadow-[8px_8px_0px_#000] rotate-3 animate-pulse">
           <i className="fas fa-comments text-3xl md:text-4xl text-pink-500"></i>
         </div>
-        <h2 className="text-2xl md:text-3xl font-black uppercase italic italic mb-2">Connectifyr HQ</h2>
-        <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest max-w-[200px]">Pick a friend to start chatting!</p>
+        <h2 className="text-2xl md:text-3xl font-black uppercase italic mb-2">Connectifyr HQ</h2>
+        <p className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest max-w-[200px]">Select a nakama to start mission briefing</p>
       </div>
     );
   }
@@ -68,7 +86,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
           </div>
           <div className="min-w-0">
             <h3 className="font-black text-white leading-tight truncate uppercase italic text-sm md:text-base">{contact.name}</h3>
-            <p className="text-[9px] text-yellow-300 font-black uppercase tracking-widest truncate hidden md:block">Active now</p>
+            <p className="text-[9px] text-yellow-300 font-black uppercase tracking-widest truncate">{contact.status === 'online' ? 'Operational' : 'Idle'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -77,21 +95,33 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
         </div>
       </div>
 
-      {/* Message Feed: Responsive bubble widths */}
+      {/* Message Feed */}
       <div 
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-6 bg-gray-50/50"
-        style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 0)', backgroundSize: '24px 24px', backgroundAlpha: '0.05' }}
+        style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 0)', backgroundSize: '24px 24px', opacity: 0.9 }}
       >
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.senderId === 'me' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`relative px-4 py-2.5 rounded-2xl border-2 md:border-4 border-black font-bold text-sm md:text-base ${
+            <div className={`relative px-4 py-3 rounded-2xl border-4 border-black font-bold text-sm md:text-base transition-all ${
               msg.senderId === 'me' 
-                ? 'bg-pink-400 text-white rounded-tr-none max-w-[85%] md:max-w-[70%]' 
-                : 'bg-white text-black rounded-tl-none shadow-[3px_3px_0px_#000] max-w-[85%] md:max-w-[70%]'
+                ? 'bg-pink-400 text-white rounded-tr-none shadow-[4px_4px_0px_#000] max-w-[85%] md:max-w-[70%]' 
+                : 'bg-white text-black rounded-tl-none shadow-[4px_4px_0px_#000] max-w-[85%] md:max-w-[70%]'
             }`}>
+              {msg.mediaUrl && (
+                <div className="mb-2 rounded-lg overflow-hidden border-2 border-black bg-black/5">
+                  {msg.mediaType === 'image' && <img src={msg.mediaUrl} className="max-w-full h-auto" alt="attached" />}
+                  {msg.mediaType === 'video' && <video src={msg.mediaUrl} controls className="max-w-full" />}
+                  {msg.mediaType === 'file' && (
+                    <div className="p-3 flex items-center gap-3">
+                      <i className="fas fa-file text-2xl"></i>
+                      <span className="text-xs truncate">{msg.fileName}</span>
+                    </div>
+                  )}
+                </div>
+              )}
               {msg.text && <p className="leading-relaxed break-words">{msg.text}</p>}
-              <div className={`text-[8px] md:text-[9px] mt-1.5 flex items-center justify-end gap-1 font-black uppercase opacity-60 ${msg.senderId === 'me' ? 'text-white' : 'text-gray-500'}`}>
+              <div className={`text-[9px] mt-1.5 flex items-center justify-end gap-1 font-black uppercase ${msg.senderId === 'me' ? 'text-white/80' : 'text-black/40'}`}>
                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 {msg.senderId === 'me' && <i className={`fas fa-check-double ${msg.status === 'read' ? 'text-indigo-900' : ''}`}></i>}
               </div>
@@ -100,21 +130,54 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
         ))}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-white border-2 md:border-4 border-black px-4 py-2 rounded-2xl rounded-tl-none shadow-[3px_3px_0px_#000] flex gap-1">
-              <span className="w-1.5 h-1.5 bg-black rounded-full animate-bounce"></span>
-              <span className="w-1.5 h-1.5 bg-black rounded-full animate-bounce [animation-delay:0.2s]"></span>
-              <span className="w-1.5 h-1.5 bg-black rounded-full animate-bounce [animation-delay:0.4s]"></span>
+            <div className="bg-white border-4 border-black px-4 py-2 rounded-2xl rounded-tl-none shadow-[4px_4px_0px_#000] flex gap-1 items-center">
+              <div className="w-1.5 h-1.5 bg-black rounded-full animate-bounce"></div>
+              <div className="w-1.5 h-1.5 bg-black rounded-full animate-bounce [animation-delay:0.2s]"></div>
+              <div className="w-1.5 h-1.5 bg-black rounded-full animate-bounce [animation-delay:0.4s]"></div>
+              <span className="text-[10px] uppercase font-black ml-2">Nakama is thinking...</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Input Area: Ergonomic touch targets */}
+      {/* Input Area */}
       <div className="p-3 md:p-6 bg-yellow-300 border-t-4 border-black">
+        {selectedMedia && (
+          <div className="mb-4 p-3 bg-white border-4 border-black rounded-2xl flex items-center gap-4 animate-in slide-in-from-bottom duration-200">
+            {selectedMedia.type === 'image' ? (
+              <img src={selectedMedia.url} className="w-12 h-12 rounded-lg object-cover border-2 border-black" alt="preview" />
+            ) : (
+              <div className="w-12 h-12 bg-indigo-100 flex items-center justify-center rounded-lg border-2 border-black">
+                <i className="fas fa-file text-indigo-500"></i>
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+               <p className="text-xs font-black truncate uppercase">{selectedMedia.name}</p>
+               <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Ready for deployment</p>
+            </div>
+            <button onClick={() => setSelectedMedia(null)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+              <i className="fas fa-times-circle text-xl"></i>
+            </button>
+          </div>
+        )}
+
         <div className="flex items-end gap-2 md:gap-4 max-w-6xl mx-auto relative">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            onChange={handleFileChange}
+            accept="image/*,video/*,.pdf,.doc,.docx"
+          />
           
           <div className="flex gap-2 pb-1">
-            <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white border-2 md:border-4 border-black rounded-xl shadow-[3px_3px_0px_#000] hover:bg-pink-50 transition-colors">
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white border-4 border-black rounded-xl shadow-[3px_3px_0px_#000] hover:bg-indigo-50 transition-colors"
+            >
+              <i className="fas fa-paperclip text-lg"></i>
+            </button>
+            <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white border-4 border-black rounded-xl shadow-[3px_3px_0px_#000] hover:bg-pink-50 transition-colors">
               <i className="far fa-smile text-lg md:text-xl"></i>
             </button>
           </div>
@@ -124,24 +187,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ contact, messages, isTyping, on
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Type a message..."
-              className="w-full bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl px-3 md:px-4 py-2.5 md:py-3 text-sm md:text-base font-bold focus:outline-none resize-none min-h-[44px] max-h-32 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.05)]"
+              placeholder="Type mission report..."
+              className="w-full bg-white border-4 border-black rounded-xl md:rounded-2xl px-4 py-3 text-sm md:text-base font-bold focus:outline-none resize-none min-h-[48px] max-h-32 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.05)]"
               rows={1}
             />
           </div>
 
           <button 
             onClick={handleSend}
-            disabled={!inputValue.trim()}
-            className={`shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center border-2 md:border-4 border-black shadow-[4px_4px_0px_#000] active:translate-y-1 active:shadow-none transition-all ${
-              inputValue.trim() ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-400 opacity-50'
+            disabled={!inputValue.trim() && !selectedMedia}
+            className={`shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center border-4 border-black shadow-[4px_4px_0px_#000] active:translate-y-1 active:shadow-none transition-all ${
+              (inputValue.trim() || selectedMedia) ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-400 opacity-50'
             }`}
           >
             <i className="fas fa-paper-plane text-sm md:text-xl"></i>
           </button>
 
           {showEmojiPicker && (
-            <div className="absolute bottom-16 md:bottom-20 left-0 w-full md:w-80 h-64 bg-white border-4 border-black rounded-2xl shadow-[8px_8px_0px_#000] p-3 overflow-y-auto grid grid-cols-6 gap-2 z-50">
+            <div className="absolute bottom-16 md:bottom-20 left-0 w-full md:w-80 h-72 bg-white border-4 border-black rounded-2xl shadow-[10px_10px_0px_#000] p-3 overflow-y-auto grid grid-cols-6 gap-2 z-50">
               {EMOJI_LIST.map((e, i) => (
                 <button key={i} onClick={() => { setInputValue(v => v + e); setShowEmojiPicker(false); }} className="text-xl md:text-2xl hover:bg-pink-100 rounded-lg p-1 transition-colors">{e}</button>
               ))}
