@@ -7,7 +7,7 @@ import { GoogleGenAI, Modality } from "@google/genai";
  */
 const getApiKey = () => {
   // @ts-ignore - Vite specific env
-  return import.meta.env?.VITE_API_KEY || process.env.API_KEY || "AIzaSyDsahkdj6IyjyT9FKWaqGCoQnzhnv5keak";
+  return import.meta.env?.VITE_API_KEY || process.env.API_KEY || "AIzaSyC60N41YGClGlAJ5P1yoGH9TQxlgzDWvTU";
 };
 
 /**
@@ -33,7 +33,7 @@ export async function getGeminiResponse(
     return response.text;
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Gomen! Connection error. Please check your API Key in Netlify settings.";
+    return "Gomen! Connection error. Please check your API Key in your deployment settings.";
   }
 }
 
